@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Level2_Paris
   m_EditorClassIdentifier: Assembly-CSharp::CityPuzzle.Core.LevelData
   cityName: "\u041F\u0430\u0440\u0438\u0436"
-  cityImage: {fileID: 21300000, guid: 6b3f304f0b93d674d96132b36f5759b1, type: 3}
+  cityImage: {fileID: 21300000, guid: 559b8a8afd31743408dde3e5a62719f6, type: 3}
   wrongAnswerPool:
   - "\u041F\u0435\u043A\u0438\u043D"
   - "\u0421\u0435\u0443\u043B"

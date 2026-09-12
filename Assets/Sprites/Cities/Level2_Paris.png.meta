@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 6b3f304f0b93d674d96132b36f5759b1
+guid: 559b8a8afd31743408dde3e5a62719f6
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6986769554321886495
-    second: Level2_Paris_0
+      213: -25537956323673639
+    second: Level2_Paris 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -98,30 +98,17 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 4
-    buildTarget: WebGL
-    maxTextureSize: 2048
-    resizeAlgorithm: 0
-    textureFormat: -1
-    textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
-    allowsAlphaSplitting: 0
-    overridden: 0
-    ignorePlatformSupport: 0
-    androidETC2FallbackOverride: 0
-    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Level2_Paris_0
+      name: Level2_Paris 1_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1008
-        height: 1008
+        width: 612
+        height: 408
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -130,8 +117,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f1dced464edf5f060800000000000000
-      internalID: 6986769554321886495
+      spriteID: 9d9b9013d5545aff0800000000000000
+      internalID: -25537956323673639
       vertices: []
       indices: 
       edges: []
@@ -150,7 +137,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Level2_Paris_0: 6986769554321886495
+      Level2_Paris 1_0: -25537956323673639
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
