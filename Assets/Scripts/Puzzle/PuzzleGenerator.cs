@@ -11,15 +11,12 @@ namespace CityPuzzle.Puzzle
         public RectTransform world;
         public RectTransform pieceLayer;
         public RectTransform boardArea;
-        public RectTransform slotVisualsContainer;
-        public Image slotVisualPrefab;
         public Image blurredBackground;
 
-        const int SamplesPerEdge = 14;
-        const int BlurredBgSize = 48;
+        const int SamplesPerEdge = 16;
+        const int BlurredBgSize = 220;
 
         readonly List<GameObject> spawnedPieces = new List<GameObject>();
-        readonly List<GameObject> spawnedSlotVisuals = new List<GameObject>();
         readonly List<Sprite> spawnedSprites = new List<Sprite>();
         readonly List<Texture2D> spawnedTextures = new List<Texture2D>();
 
@@ -36,8 +33,10 @@ namespace CityPuzzle.Puzzle
 
             Texture2D sourceTex = level.cityImage.texture;
             Color32[] sourcePixels = sourceTex.GetPixels32();
-            int srcW = sourceTex.width;
-            int srcH = sourceTex.height;
+            var crop = SquareCrop.Centered(sourceTex.width, sourceTex.height);
+            int srcW = crop.Size;
+            int srcH = crop.Size;
+            int fullSrcW = sourceTex.width;
 
             float boardW = boardArea.rect.width;
             float boardH = boardArea.rect.height;
@@ -64,23 +63,14 @@ namespace CityPuzzle.Puzzle
                     );
                     Vector2 targetPos = boardArea.anchoredPosition + slotLocalPos;
 
-                    if (slotVisualPrefab != null && slotVisualsContainer != null)
-                    {
-                        Image slotVisual = Instantiate(slotVisualPrefab, slotVisualsContainer);
-                        RectTransform svRect = slotVisual.rectTransform;
-                        svRect.sizeDelta = new Vector2(cellW - 4f, cellH - 4f);
-                        svRect.anchoredPosition = slotLocalPos;
-                        spawnedSlotVisuals.Add(slotVisual.gameObject);
-                    }
-
-                    int srcOriginX = Mathf.RoundToInt(c * srcCellW - srcMarginX);
-                    int srcOriginY = Mathf.RoundToInt(srcH - (r + 1) * srcCellH - srcMarginY);
+                    int srcOriginX = crop.X + Mathf.RoundToInt(c * srcCellW - srcMarginX);
+                    int srcOriginY = crop.Y + Mathf.RoundToInt(srcH - (r + 1) * srcCellH - srcMarginY);
                     int canvasW = Mathf.Max(2, Mathf.RoundToInt(srcCellW + 2 * srcMarginX));
                     int canvasH = Mathf.Max(2, Mathf.RoundToInt(srcCellH + 2 * srcMarginY));
 
                     Vector2[] polygon = JigsawShapeGenerator.BuildPolygon(edges, r, c, rows, cols,
                         srcCellW, srcCellH, srcMarginX, srcMarginY, SamplesPerEdge);
-                    Color32[] pixels = JigsawRasterizer.Rasterize(polygon, canvasW, canvasH, sourcePixels, srcW, srcH, srcOriginX, srcOriginY);
+                    Color32[] pixels = JigsawRasterizer.Rasterize(polygon, canvasW, canvasH, sourcePixels, fullSrcW, sourceTex.height, srcOriginX, srcOriginY);
 
                     var tex = new Texture2D(canvasW, canvasH, TextureFormat.RGBA32, false);
                     tex.filterMode = FilterMode.Bilinear;
@@ -112,16 +102,7 @@ namespace CityPuzzle.Puzzle
         {
             if (blurredBackground == null) return;
 
-            var rt = RenderTexture.GetTemporary(BlurredBgSize, BlurredBgSize);
-            Graphics.Blit(sourceTex, rt);
-            var prevActive = RenderTexture.active;
-            RenderTexture.active = rt;
-            var smallTex = new Texture2D(BlurredBgSize, BlurredBgSize, TextureFormat.RGBA32, false);
-            smallTex.ReadPixels(new Rect(0, 0, BlurredBgSize, BlurredBgSize), 0, 0);
-            smallTex.Apply();
-            RenderTexture.active = prevActive;
-            RenderTexture.ReleaseTemporary(rt);
-            smallTex.filterMode = FilterMode.Bilinear;
+            var smallTex = ImageBlur.CreateBlurredTexture(sourceTex, BlurredBgSize);
             spawnedTextures.Add(smallTex);
 
             Sprite bgSprite = Sprite.Create(smallTex, new Rect(0, 0, BlurredBgSize, BlurredBgSize), new Vector2(0.5f, 0.5f));
@@ -157,11 +138,9 @@ namespace CityPuzzle.Puzzle
         public void Clear()
         {
             foreach (var go in spawnedPieces) if (go != null) Destroy(go);
-            foreach (var go in spawnedSlotVisuals) if (go != null) Destroy(go);
             foreach (var s in spawnedSprites) if (s != null) Destroy(s);
             foreach (var t in spawnedTextures) if (t != null) Destroy(t);
             spawnedPieces.Clear();
-            spawnedSlotVisuals.Clear();
             spawnedSprites.Clear();
             spawnedTextures.Clear();
         }

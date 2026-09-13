@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using CityPuzzle.UI;
-using CityPuzzle.Services;
 
 namespace CityPuzzle.Core
 {
+    // Pure question/answer controller — reports the result and lets the caller (GameManager)
+    // decide what happens next (unlock, ad, navigation). Knows nothing about ads or screens.
     public class QuizManager : MonoBehaviour
     {
         public QuizUI ui;
@@ -16,6 +17,7 @@ namespace CityPuzzle.Core
 
         Action<bool> onResolved;
         string correctCityName;
+        bool pendingCorrect;
 
         public void StartQuiz(LevelData level, Action<bool> resolved)
         {
@@ -42,17 +44,16 @@ namespace CityPuzzle.Core
                 int idx = i;
                 ui.answerButtons[i].onClick.AddListener(() => OnAnswer(option, idx));
             }
-
-            ui.watchAdButton.onClick.RemoveAllListeners();
-            ui.watchAdButton.onClick.AddListener(OnWatchAdClicked);
         }
 
         void OnAnswer(string chosen, int buttonIndex)
         {
             bool correct = chosen == correctCityName;
+            pendingCorrect = correct;
+
             foreach (var b in ui.answerButtons)
             {
-                // transition=None so the built-in disabled-state tint can't stomp our feedback colors.
+                // transition=None so the built-in disabled-state color tint can't stomp our feedback colors.
                 b.transition = Selectable.Transition.None;
                 b.interactable = false;
             }
@@ -61,15 +62,20 @@ namespace CityPuzzle.Core
 
             if (correct)
             {
-                ui.feedbackText.text = "Верно! Следующий уровень открыт.";
-                Invoke(nameof(ResolveCorrect), 1.0f);
+                ui.feedbackText.text = "Верно!";
             }
             else
             {
                 HighlightCorrectAnswer();
                 ui.feedbackText.text = $"Неверно. Правильный ответ: {correctCityName}";
-                ui.watchAdContainer.SetActive(true);
             }
+
+            Invoke(nameof(Resolve), 1.1f);
+        }
+
+        void Resolve()
+        {
+            onResolved?.Invoke(pendingCorrect);
         }
 
         void HighlightCorrectAnswer()
@@ -83,31 +89,6 @@ namespace CityPuzzle.Core
                     if (img != null) img.color = CorrectColor;
                 }
             }
-        }
-
-        void ResolveCorrect()
-        {
-            onResolved?.Invoke(true);
-        }
-
-        void OnWatchAdClicked()
-        {
-            ui.watchAdContainer.SetActive(false);
-            var sdk = YandexSDKManager.Instance;
-            if (sdk == null) { onResolved?.Invoke(true); return; }
-            sdk.ShowRewardedAd(success =>
-            {
-                if (success)
-                {
-                    ui.feedbackText.text = "Реклама просмотрена. Уровень открыт!";
-                    onResolved?.Invoke(true);
-                }
-                else
-                {
-                    ui.feedbackText.text = "Реклама не была досмотрена. Попробуйте ещё раз.";
-                    ui.watchAdContainer.SetActive(true);
-                }
-            });
         }
 
         void Shuffle(List<string> list)

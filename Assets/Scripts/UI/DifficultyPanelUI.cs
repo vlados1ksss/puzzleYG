@@ -12,9 +12,9 @@ namespace CityPuzzle.UI
         public DifficultyOptionRow[] rows; // Easy, Medium, Hard, in that order
         public Button closeButton;
 
-        public void Show(int levelIndex, string cityName, Action<Difficulty> onPlay, Action onClose)
+        public void Show(int levelIndex, Action<Difficulty> onPlay, Action onClose)
         {
-            levelTitleText.text = cityName;
+            levelTitleText.text = $"Уровень {levelIndex + 1}";
             for (int i = 0; i < rows.Length; i++)
             {
                 var difficulty = (Difficulty)i;

@@ -17,6 +17,7 @@ namespace CityPuzzle.Services
         public event Action OnSdkReady;
 
         Action<bool> pendingRewardedCallback;
+        Action pendingInterstitialCallback;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")] static extern void YG_Initialize(string gameObjectName);
@@ -128,20 +129,32 @@ namespace CityPuzzle.Services
             }
         }
 
-        public void ShowInterstitial()
+        public void ShowInterstitial(Action onClosed = null)
         {
+            pendingInterstitialCallback = onClosed;
 #if UNITY_WEBGL && !UNITY_EDITOR
             PauseGame(true);
             YG_ShowFullscreenAd();
 #else
-            Debug.Log("[YandexSDK-Stub] Showing interstitial ad (stub, no-op).");
+            StartCoroutine(SimulateInterstitial());
 #endif
+        }
+
+        IEnumerator SimulateInterstitial()
+        {
+            PauseGame(true);
+            Debug.Log("[YandexSDK-Stub] Showing interstitial ad (stub)...");
+            yield return new WaitForSecondsRealtime(0.8f);
+            OnInterstitialClosed(null);
         }
 
         // Called by the JS bridge when the interstitial ad closes.
         public void OnInterstitialClosed(string _)
         {
             PauseGame(false);
+            var cb = pendingInterstitialCallback;
+            pendingInterstitialCallback = null;
+            cb?.Invoke();
         }
 
         public void ShowRewardedAd(Action<bool> onResult)

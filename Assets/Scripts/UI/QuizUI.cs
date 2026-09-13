@@ -9,8 +9,6 @@ namespace CityPuzzle.UI
         public Button[] answerButtons;
         public Text[] answerTexts;
         public Text feedbackText;
-        public Button watchAdButton;
-        public GameObject watchAdContainer;
 
         // Captured once at build time so ResetView can restore it instead of guessing a color.
         public Color answerBaseColor = Color.white;
@@ -18,7 +16,6 @@ namespace CityPuzzle.UI
         public void ResetView()
         {
             feedbackText.text = "";
-            watchAdContainer.SetActive(false);
             foreach (var b in answerButtons)
             {
                 b.gameObject.SetActive(true);

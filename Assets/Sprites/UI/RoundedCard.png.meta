@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 72ef0eefe1b53f14385121ba04afed79
+guid: 52bed21cc981d7d4f83c3923c2a1f4b6
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6753631302674296063
-    second: Rounded_0
+      213: 4491096589305895079
+    second: RoundedCard_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 44, y: 44, z: 44, w: 44}
+  spriteBorder: {x: 36, y: 36, z: 36, w: 36}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -115,13 +115,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Rounded_0
+      name: RoundedCard_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 160
-        height: 160
+        width: 128
+        height: 128
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -130,8 +130,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 103d32ccc184642a0800000000000000
-      internalID: -6753631302674296063
+      spriteID: 7a8db899d84935e30800000000000000
+      internalID: 4491096589305895079
       vertices: []
       indices: 
       edges: []
@@ -150,7 +150,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Rounded_0: -6753631302674296063
+      RoundedCard_0: 4491096589305895079
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

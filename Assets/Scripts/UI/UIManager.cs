@@ -9,8 +9,7 @@ namespace CityPuzzle.UI
         public CanvasGroup mainMenuPanel;
         public CanvasGroup levelSelectPanel;
         public CanvasGroup gameplayPanel;
-        public CanvasGroup quizPanel;
-        public CanvasGroup winPanel;
+        public CanvasGroup resultPanel;
         public CanvasGroup difficultyPanel;
 
         const float FadeDuration = 0.25f;
@@ -23,8 +22,7 @@ namespace CityPuzzle.UI
             SetImmediate(mainMenuPanel, false);
             SetImmediate(levelSelectPanel, false);
             SetImmediate(gameplayPanel, false);
-            SetImmediate(quizPanel, false);
-            SetImmediate(winPanel, false);
+            SetImmediate(resultPanel, false);
             SetImmediate(difficultyPanel, false);
         }
 
@@ -32,10 +30,8 @@ namespace CityPuzzle.UI
         public void ShowLevelSelect() => SwitchScreen(levelSelectPanel);
         public void ShowGameplay() => SwitchScreen(gameplayPanel);
 
-        public void ShowQuiz() => Fade(quizPanel, true);
-        public void HideQuiz() => Fade(quizPanel, false);
-        public void ShowWin() => Fade(winPanel, true);
-        public void HideWin() => Fade(winPanel, false);
+        public void ShowResult() => Fade(resultPanel, true);
+        public void HideResult() => Fade(resultPanel, false);
         public void ShowDifficulty() => Fade(difficultyPanel, true);
         public void HideDifficulty() => Fade(difficultyPanel, false);
 

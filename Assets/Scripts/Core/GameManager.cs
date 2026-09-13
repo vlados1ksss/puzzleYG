@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using CityPuzzle.UI;
 using CityPuzzle.Puzzle;
@@ -13,20 +14,23 @@ namespace CityPuzzle.Core
         public QuizManager quizManager;
         public ZoomPanController zoomPanController;
 
-        public LevelSelectUI levelSelectUI;
+        public LevelCarouselUI levelCarouselUI;
         public DifficultyPanelUI difficultyPanelUI;
         public GameplayUI gameplayUI;
-        public WinPanelUI winPanelUI;
+        public ResultPanelUI resultPanelUI;
         public Timer gameTimer;
 
         int currentLevelIndex;
         Difficulty currentDifficulty;
         PuzzleBoard currentBoard;
+        int lastViewedLevelIndex;
 
         void Start()
         {
             var sdk = YandexSDKManager.Instance;
             if (sdk != null) sdk.OnSdkReady += HandleSdkReady;
+            levelCarouselUI.onPlayRequested += OpenDifficultyPicker;
+            resultPanelUI.WireButtons(OnResultMenuClicked, OnResultNextClicked);
             ShowMainMenu();
         }
 
@@ -42,16 +46,15 @@ namespace CityPuzzle.Core
 
         public void OpenLevelSelect()
         {
-            levelSelectUI.onLevelSelected = OpenDifficultyPicker;
-            levelSelectUI.Refresh();
             uiManager.ShowLevelSelect();
+            levelCarouselUI.Open(lastViewedLevelIndex);
         }
 
         void OpenDifficultyPicker(int levelIndex)
         {
+            lastViewedLevelIndex = levelIndex;
             currentLevelIndex = levelIndex;
-            LevelData level = levelManager.GetLevel(levelIndex);
-            difficultyPanelUI.Show(levelIndex, level.cityName, OnDifficultyChosen, () => uiManager.HideDifficulty());
+            difficultyPanelUI.Show(levelIndex, OnDifficultyChosen, () => uiManager.HideDifficulty());
             uiManager.ShowDifficulty();
         }
 
@@ -65,6 +68,7 @@ namespace CityPuzzle.Core
         {
             currentLevelIndex = index;
             currentDifficulty = difficulty;
+            lastViewedLevelIndex = index;
             LevelData level = levelManager.GetLevel(index);
 
             gameplayUI.SetLevelTitle(index, difficulty);
@@ -95,34 +99,86 @@ namespace CityPuzzle.Core
         {
             gameTimer.StopTimer();
             float finalTime = gameTimer.Elapsed;
+            bool wasCompletedBefore = SaveService.IsLevelCompleted(currentLevelIndex);
             SaveService.SetBestTime(currentLevelIndex, currentDifficulty, finalTime);
-            float best = SaveService.GetBestTime(currentLevelIndex, currentDifficulty);
 
             var sdk = YandexSDKManager.Instance;
             if (sdk != null) sdk.SubmitLeaderboardScore($"level_{currentLevelIndex + 1}_{currentDifficulty}_time", Mathf.RoundToInt(finalTime));
 
-            winPanelUI.Show(finalTime, best, OnWinContinue);
-            uiManager.ShowWin();
-        }
-
-        void OnWinContinue()
-        {
-            uiManager.HideWin();
-            LevelData level = levelManager.GetLevel(currentLevelIndex);
-            quizManager.StartQuiz(level, OnQuizResolved);
-            uiManager.ShowQuiz();
-        }
-
-        void OnQuizResolved(bool unlocked)
-        {
-            uiManager.HideQuiz();
             puzzleGenerator.Clear();
-            if (unlocked) levelManager.UnlockLevel(currentLevelIndex);
+            uiManager.ShowResult();
 
+            string difficultyLabel = $"{DifficultyInfo.DisplayName(currentDifficulty)} · {DifficultyInfo.PieceCount(currentDifficulty)} деталей";
+
+            if (!wasCompletedBefore)
+            {
+                LevelData level = levelManager.GetLevel(currentLevelIndex);
+                resultPanelUI.ShowFirstTime(finalTime, difficultyLabel);
+                quizManager.StartQuiz(level, OnQuizAnswered);
+            }
+            else
+            {
+                int stars = SaveService.GetStarRating(currentLevelIndex);
+                bool bonus = SaveService.HasQuizBonus(currentLevelIndex);
+                resultPanelUI.ShowRepeat(finalTime, difficultyLabel, stars, bonus);
+            }
+        }
+
+        void OnQuizAnswered(bool correct)
+        {
             var sdk = YandexSDKManager.Instance;
-            if (sdk != null) sdk.SaveProgress();
+            if (correct)
+            {
+                SaveService.SetQuizBonus(currentLevelIndex);
+                levelManager.UnlockLevel(currentLevelIndex);
+                if (sdk != null) sdk.SaveProgress();
+                resultPanelUI.RevealButtons();
+                return;
+            }
 
-            OpenLevelSelect();
+            Action<bool> afterAd = _ =>
+            {
+                levelManager.UnlockLevel(currentLevelIndex);
+                if (sdk != null) sdk.SaveProgress();
+                int target = currentLevelIndex + 1;
+                uiManager.HideResult();
+                lastViewedLevelIndex = target;
+                uiManager.ShowLevelSelect();
+                levelCarouselUI.GoTo(target, animateUnlock: true);
+            };
+
+            if (sdk != null) sdk.ShowRewardedAd(afterAd);
+            else afterAd(true);
+        }
+
+        void OnResultMenuClicked()
+        {
+            int target = currentLevelIndex;
+            RunInterstitialThen(() =>
+            {
+                uiManager.HideResult();
+                lastViewedLevelIndex = target;
+                OpenLevelSelect();
+            });
+        }
+
+        void OnResultNextClicked()
+        {
+            int target = currentLevelIndex + 1;
+            RunInterstitialThen(() =>
+            {
+                uiManager.HideResult();
+                lastViewedLevelIndex = target;
+                uiManager.ShowLevelSelect();
+                levelCarouselUI.Open(target);
+            });
+        }
+
+        void RunInterstitialThen(Action then)
+        {
+            var sdk = YandexSDKManager.Instance;
+            if (sdk != null) sdk.ShowInterstitial(() => then());
+            else then();
         }
     }
 }
