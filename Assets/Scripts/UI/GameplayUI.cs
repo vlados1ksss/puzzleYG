@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using CityPuzzle.Core;
+using CityPuzzle.Services;
 
 namespace CityPuzzle.UI
 {
@@ -22,7 +23,7 @@ namespace CityPuzzle.UI
 
         public void SetLevelTitle(int levelIndex, Difficulty difficulty)
         {
-            levelTitleText.text = $"Уровень {levelIndex + 1} · {DifficultyInfo.DisplayName(difficulty)}";
+            levelTitleText.text = $"{Loc.Level(levelIndex + 1)} · {DifficultyInfo.DisplayName(difficulty)}";
         }
 
         void Update()

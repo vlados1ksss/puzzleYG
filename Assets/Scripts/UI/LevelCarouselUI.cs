@@ -107,9 +107,9 @@ namespace CityPuzzle.UI
             playButton.gameObject.SetActive(unlocked);
 
             levelLabelText.gameObject.SetActive(true);
-            levelLabelText.text = $"Уровень {index + 1}";
+            levelLabelText.text = Loc.Level(index + 1);
             cityNameText.gameObject.SetActive(completed);
-            if (completed) cityNameText.text = level.cityName;
+            if (completed) cityNameText.text = Loc.City(level.cityName);
 
             float best = SaveService.GetOverallBestTime(index);
             bestTimeText.gameObject.SetActive(unlocked);
@@ -137,7 +137,7 @@ namespace CityPuzzle.UI
             if (comingSoonText != null)
             {
                 comingSoonText.gameObject.SetActive(true);
-                comingSoonText.text = "Больше уровней -\nскоро";
+                comingSoonText.text = Loc.T("Больше уровней -\nскоро", "More levels\ncoming soon");
             }
         }
 

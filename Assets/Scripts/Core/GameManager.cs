@@ -30,7 +30,7 @@ namespace CityPuzzle.Core
         void Start()
         {
             var sdk = YandexSDKManager.Instance;
-            if (sdk != null) sdk.OnSdkReady += HandleSdkReady;
+            if (sdk != null) sdk.WhenReady(HandleSdkReady);
             levelCarouselUI.onPlayRequested += OpenDifficultyPicker;
             resultPanelUI.WireButtons(OnResultMenuClicked, OnResultNextClicked);
             ShowMainMenu();
@@ -83,6 +83,7 @@ namespace CityPuzzle.Core
 
             if (zoomPanController != null) zoomPanController.ResetView(0.85f, Vector2.zero);
             gameTimer.StartTimer();
+            YG2.GameplayStart();
         }
 
         public void ResetGameplayView()
@@ -92,6 +93,7 @@ namespace CityPuzzle.Core
 
         void OnBackFromGameplay()
         {
+            YG2.GameplayStop();
             gameTimer.StopTimer();
             puzzleGenerator.Clear();
             OpenLevelSelect();
@@ -99,6 +101,7 @@ namespace CityPuzzle.Core
 
         void HandlePuzzleCompleted()
         {
+            YG2.GameplayStop();
             gameTimer.StopTimer();
             float finalTime = gameTimer.Elapsed;
             bool wasCompletedBefore = SaveService.IsLevelCompleted(currentLevelIndex);
@@ -110,7 +113,7 @@ namespace CityPuzzle.Core
             puzzleGenerator.Clear();
             uiManager.ShowResult();
 
-            string difficultyLabel = $"{DifficultyInfo.DisplayName(currentDifficulty)} · {DifficultyInfo.PieceCount(currentDifficulty)} деталей";
+            string difficultyLabel = $"{DifficultyInfo.DisplayName(currentDifficulty)} · {Loc.Pieces(DifficultyInfo.PieceCount(currentDifficulty))}";
 
             if (!wasCompletedBefore)
             {
@@ -129,39 +132,32 @@ namespace CityPuzzle.Core
         void OnQuizAnswered(bool correct)
         {
             var sdk = YandexSDKManager.Instance;
+            levelManager.UnlockLevel(currentLevelIndex);
+            if (correct) SaveService.SetQuizBonus(currentLevelIndex);
+            if (sdk != null) sdk.SaveProgress();
+
             if (correct)
             {
-                SaveService.SetQuizBonus(currentLevelIndex);
-                levelManager.UnlockLevel(currentLevelIndex);
-                if (sdk != null) sdk.SaveProgress();
                 resultPanelUI.RevealButtons();
                 return;
             }
 
-            Action<bool> afterAd = _ =>
-            {
-                levelManager.UnlockLevel(currentLevelIndex);
-                if (sdk != null) sdk.SaveProgress();
-                int target = currentLevelIndex + 1;
-                uiManager.HideResult();
-                lastViewedLevelIndex = target;
-                uiManager.ShowLevelSelect();
-                levelCarouselUI.GoTo(target, animateUnlock: true);
-            };
-
-            if (sdk != null) sdk.ShowRewardedAd(afterAd);
-            else afterAd(true);
-        }
-
-        void OnResultMenuClicked()
-        {
-            int target = currentLevelIndex;
+            // Wrong answer: fullscreen ad first, then straight on to the next level in the carousel.
+            int target = currentLevelIndex + 1;
             RunInterstitialThen(() =>
             {
                 uiManager.HideResult();
                 lastViewedLevelIndex = target;
-                OpenLevelSelect();
+                uiManager.ShowLevelSelect();
+                levelCarouselUI.GoTo(target, animateUnlock: true);
             });
+        }
+
+        void OnResultMenuClicked()
+        {
+            uiManager.HideResult();
+            lastViewedLevelIndex = currentLevelIndex;
+            OpenLevelSelect();
         }
 
         void OnResultNextClicked()
@@ -179,7 +175,7 @@ namespace CityPuzzle.Core
         void RunInterstitialThen(Action then)
         {
             var sdk = YandexSDKManager.Instance;
-            if (sdk != null) sdk.ShowInterstitial(() => then());
+            if (sdk != null) sdk.ShowInterstitial(then);
             else then();
         }
     }

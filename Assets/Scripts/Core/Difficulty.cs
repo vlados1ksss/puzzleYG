@@ -1,3 +1,5 @@
+using CityPuzzle.Services;
+
 namespace CityPuzzle.Core
 {
     public enum Difficulty
@@ -29,9 +31,9 @@ namespace CityPuzzle.Core
 
         public static string DisplayName(Difficulty d) => d switch
         {
-            Difficulty.Easy => "Лёгкий",
-            Difficulty.Medium => "Средний",
-            _ => "Сложный"
+            Difficulty.Easy => Loc.T("Лёгкий", "Easy"),
+            Difficulty.Medium => Loc.T("Средний", "Medium"),
+            _ => Loc.T("Сложный", "Hard")
         };
     }
 }

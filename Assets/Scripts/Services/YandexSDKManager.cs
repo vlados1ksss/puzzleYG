@@ -4,29 +4,28 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
+using YG;
 
 namespace CityPuzzle.Services
 {
-    // Thin wrapper around the Yandex Games SDK JS bridge (Assets/Plugins/WebGL/YandexSDK.jslib).
-    // Outside WebGL builds it falls back to local stubs so the game is fully playable in the Editor.
+    // Game-side facade over Plugin Your Games 2 (YG2). The plugin owns SDK init, LoadingAPI.ready (autoGRA),
+    // pause on focus loss and interstitial ads. Assets/Plugins/WebGL/YandexSDK.jslib only covers what the
+    // installed YG2 modules don't: language, cloud saves and leaderboards — reusing the plugin's `ysdk`.
     public class YandexSDKManager : MonoBehaviour
     {
         public static YandexSDKManager Instance { get; private set; }
 
         public bool IsInitialized { get; private set; }
-        public event Action OnSdkReady;
+        event Action onSdkReady;
 
-        Action<bool> pendingRewardedCallback;
-        Action pendingInterstitialCallback;
+        // How long to wait for the platform to actually open a requested interstitial before moving on.
+        const float InterstitialOpenTimeout = 5f;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        [DllImport("__Internal")] static extern void YG_Initialize(string gameObjectName);
-        [DllImport("__Internal")] static extern void YG_ShowFullscreenAd();
-        [DllImport("__Internal")] static extern void YG_ShowRewardedAd();
+        [DllImport("__Internal")] static extern string YG_GetLang();
         [DllImport("__Internal")] static extern void YG_SaveData(string json);
-        [DllImport("__Internal")] static extern void YG_LoadData();
+        [DllImport("__Internal")] static extern void YG_LoadData(string gameObjectName);
         [DllImport("__Internal")] static extern void YG_SubmitScore(string leaderboardName, int score);
-        [DllImport("__Internal")] static extern void YG_GameReady();
 #endif
 
         [Serializable]
@@ -44,32 +43,41 @@ namespace CityPuzzle.Services
 
         void Start()
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            YG_Initialize(gameObject.name);
-#else
-            StartCoroutine(SimulateInit());
-#endif
+            if (YG2.isSDKEnabled) HandleSdkData();
+            else YG2.onGetSDKData += HandleSdkData;
         }
 
-        IEnumerator SimulateInit()
+        void OnDestroy()
         {
-            yield return new WaitForSeconds(0.2f);
-            Debug.Log("[YandexSDK-Stub] SDK initialized (editor/standalone stub).");
-            OnSdkInitialized(null);
+            YG2.onGetSDKData -= HandleSdkData;
         }
 
-        // Called by the JS bridge via SendMessage(gameObject.name, "OnSdkInitialized", "") once ysdk.init() resolves.
-        public void OnSdkInitialized(string _)
+        void HandleSdkData()
         {
+            YG2.onGetSDKData -= HandleSdkData;
+            if (IsInitialized) return;
             IsInitialized = true;
-            NotifyGameReady();
-            OnSdkReady?.Invoke();
+            Loc.SetLanguage(DetectLanguage());
+            var ready = onSdkReady;
+            onSdkReady = null;
+            ready?.Invoke();
         }
 
-        public void NotifyGameReady()
+        // Runs the action once the SDK is ready — immediately if it already is.
+        public void WhenReady(Action action)
+        {
+            if (IsInitialized) action?.Invoke();
+            else onSdkReady += action;
+        }
+
+        static string DetectLanguage()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            YG_GameReady();
+            return YG_GetLang();
+#elif UNITY_EDITOR
+            return YG2.infoYG.Simulation.language;
+#else
+            return Application.systemLanguage == SystemLanguage.Russian ? "ru" : "en";
 #endif
         }
 
@@ -100,7 +108,7 @@ namespace CityPuzzle.Services
         public void LoadProgress()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            YG_LoadData();
+            YG_LoadData(gameObject.name);
 #else
             Debug.Log("[YandexSDK-Stub] LoadProgress: no cloud in editor, using local PlayerPrefs.");
 #endif
@@ -129,60 +137,50 @@ namespace CityPuzzle.Services
             }
         }
 
-        public void ShowInterstitial(Action onClosed = null)
+        // Shows a YG2 interstitial and calls onDone exactly once when it's over. When no ad can be requested
+        // (interval from the YG2 settings not elapsed, another ad open, SDK not ready) onDone runs immediately,
+        // because YG2.InterstitialAdvShow() fires no callbacks in those cases. The plugin pauses the game itself.
+        public void ShowInterstitial(Action onDone)
         {
-            pendingInterstitialCallback = onClosed;
-#if UNITY_WEBGL && !UNITY_EDITOR
-            PauseGame(true);
-            YG_ShowFullscreenAd();
-#else
-            StartCoroutine(SimulateInterstitial());
+            if (!CanRequestInterstitial())
+            {
+                onDone?.Invoke();
+                return;
+            }
+
+            bool opened = false;
+            bool finished = false;
+
+            void Opened() => opened = true;
+            void Finish()
+            {
+                if (finished) return;
+                finished = true;
+                YG2.onOpenInterAdv -= Opened;
+                YG2.onCloseInterAdv -= Finish;
+                YG2.onErrorInterAdv -= Finish;
+                onDone?.Invoke();
+            }
+
+            YG2.onOpenInterAdv += Opened;
+            YG2.onCloseInterAdv += Finish;
+            YG2.onErrorInterAdv += Finish;
+            YG2.InterstitialAdvShow();
+            StartCoroutine(FinishIfNotOpened(() => opened, Finish));
+        }
+
+        static bool CanRequestInterstitial()
+        {
+#if UNITY_EDITOR
+            if (!YG2.infoYG.Simulation.enableInterAdv) return false;
 #endif
+            return YG2.isSDKEnabled && !YG2.nowAdsShow && YG2.isTimerAdvCompleted;
         }
 
-        IEnumerator SimulateInterstitial()
+        IEnumerator FinishIfNotOpened(Func<bool> opened, Action finish)
         {
-            PauseGame(true);
-            Debug.Log("[YandexSDK-Stub] Showing interstitial ad (stub)...");
-            yield return new WaitForSecondsRealtime(0.8f);
-            OnInterstitialClosed(null);
-        }
-
-        // Called by the JS bridge when the interstitial ad closes.
-        public void OnInterstitialClosed(string _)
-        {
-            PauseGame(false);
-            var cb = pendingInterstitialCallback;
-            pendingInterstitialCallback = null;
-            cb?.Invoke();
-        }
-
-        public void ShowRewardedAd(Action<bool> onResult)
-        {
-            pendingRewardedCallback = onResult;
-#if UNITY_WEBGL && !UNITY_EDITOR
-            PauseGame(true);
-            YG_ShowRewardedAd();
-#else
-            StartCoroutine(SimulateRewardedAd());
-#endif
-        }
-
-        IEnumerator SimulateRewardedAd()
-        {
-            PauseGame(true);
-            Debug.Log("[YandexSDK-Stub] Simulating rewarded ad playback...");
-            yield return new WaitForSecondsRealtime(1.5f);
-            OnRewardedAdClosed("success");
-        }
-
-        // Called by the JS bridge with "success" or "fail" once the rewarded ad flow ends.
-        public void OnRewardedAdClosed(string result)
-        {
-            PauseGame(false);
-            var cb = pendingRewardedCallback;
-            pendingRewardedCallback = null;
-            cb?.Invoke(result == "success");
+            yield return new WaitForSecondsRealtime(InterstitialOpenTimeout);
+            if (!opened()) finish();
         }
 
         public void SubmitLeaderboardScore(string leaderboardName, int score)
@@ -192,12 +190,6 @@ namespace CityPuzzle.Services
 #else
             Debug.Log($"[YandexSDK-Stub] SubmitLeaderboardScore({leaderboardName}, {score})");
 #endif
-        }
-
-        void PauseGame(bool pause)
-        {
-            Time.timeScale = pause ? 0f : 1f;
-            AudioListener.pause = pause;
         }
     }
 }

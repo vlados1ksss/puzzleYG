@@ -14,12 +14,12 @@ namespace CityPuzzle.UI
 
         public void Show(int levelIndex, Action<Difficulty> onPlay, Action onClose)
         {
-            levelTitleText.text = $"Уровень {levelIndex + 1}";
+            levelTitleText.text = Loc.Level(levelIndex + 1);
             for (int i = 0; i < rows.Length; i++)
             {
                 var difficulty = (Difficulty)i;
                 rows[i].nameText.text = DifficultyInfo.DisplayName(difficulty);
-                rows[i].pieceCountText.text = DifficultyInfo.PieceCount(difficulty) + " деталей";
+                rows[i].pieceCountText.text = Loc.Pieces(DifficultyInfo.PieceCount(difficulty));
                 float best = SaveService.GetBestTime(levelIndex, difficulty);
                 rows[i].bestTimeText.text = best >= 0f ? Timer.Format(best) : "—";
                 rows[i].playButton.onClick.RemoveAllListeners();

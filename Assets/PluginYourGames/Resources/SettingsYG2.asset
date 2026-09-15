@@ -30,8 +30,19 @@ MonoBehaviour:
     language: ru
     advIntervalSimulation: 60
     durationAdv: 0.5
+    enableInterAdv: 1
     loadAdv: 0
     testFailAds: 0
+    pauseOnFocusGame: 0
+  InterstitialAdv:
+    showFirstAdv: 0
+    interAdvInterval: 60
+    postponeCallByFail: 1
+    postponeCallTimer: 10
+    labelAdvSimLabel: 0
+  RewardedAdv:
+    skipInterAdvAfterReward: 0
+    labelAdvSimLabel: 0
   Templates:
     logoImageFormat: 0
     backgroundImgFormat: 0

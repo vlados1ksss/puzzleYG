@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using CityPuzzle.UI;
+using CityPuzzle.Services;
 
 namespace CityPuzzle.Core
 {
@@ -22,15 +23,15 @@ namespace CityPuzzle.Core
         public void StartQuiz(LevelData level, Action<bool> resolved)
         {
             onResolved = resolved;
-            correctCityName = level.cityName;
+            correctCityName = Loc.City(level.cityName);
             ui.ResetView();
-            ui.questionText.text = "Какой город изображён на собранном пазле?";
+            ui.questionText.text = Loc.T("Какой город изображён на собранном пазле?", "Which city is shown in the puzzle?");
 
-            var options = new List<string> { level.cityName };
+            var options = new List<string> { correctCityName };
             var pool = new List<string>(level.wrongAnswerPool);
             Shuffle(pool);
             for (int i = 0; i < pool.Count && options.Count < 4; i++)
-                options.Add(pool[i]);
+                options.Add(Loc.City(pool[i]));
             Shuffle(options);
 
             for (int i = 0; i < ui.answerButtons.Length; i++)
@@ -62,12 +63,12 @@ namespace CityPuzzle.Core
 
             if (correct)
             {
-                ui.feedbackText.text = "Верно!";
+                ui.feedbackText.text = Loc.T("Верно!", "Correct!");
             }
             else
             {
                 HighlightCorrectAnswer();
-                ui.feedbackText.text = $"Неверно. Правильный ответ: {correctCityName}";
+                ui.feedbackText.text = Loc.T($"Неверно. Правильный ответ: {correctCityName}", $"Wrong. The correct answer is {correctCityName}");
             }
 
             Invoke(nameof(Resolve), 1.1f);

@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using CityPuzzle.Core;
+using CityPuzzle.Services;
 
 namespace CityPuzzle.UI
 {
@@ -38,7 +39,8 @@ namespace CityPuzzle.UI
             firstTimeBody.SetActive(true);
             repeatBody.SetActive(false);
             buttonsRow.SetActive(false);
-            introText.text = "Уровень пройден! Сможете отгадать, какой город изображён на фото?";
+            introText.text = Loc.T("Уровень пройден! Сможете отгадать, какой город изображён на фото?",
+                "Level complete! Can you guess which city is in the photo?");
         }
 
         public void RevealButtons() => buttonsRow.SetActive(true);
@@ -49,7 +51,7 @@ namespace CityPuzzle.UI
             firstTimeBody.SetActive(false);
             repeatBody.SetActive(true);
             buttonsRow.SetActive(false);
-            repeatTitleText.text = "Уровень пройден!";
+            repeatTitleText.text = Loc.T("Уровень пройден!", "Level complete!");
             StopAllCoroutines();
             StartCoroutine(RevealStarsThenButtons(starCount, bonus));
         }
@@ -63,7 +65,7 @@ namespace CityPuzzle.UI
 
         void SetHeader(float time, string difficultyLabel)
         {
-            timeText.text = $"Время: {Timer.Format(time)}";
+            timeText.text = Loc.T($"Время: {Timer.Format(time)}", $"Time: {Timer.Format(time)}");
             difficultyText.text = difficultyLabel;
         }
     }
