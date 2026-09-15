@@ -142,8 +142,10 @@ namespace CityPuzzle.Services
         // because YG2.InterstitialAdvShow() fires no callbacks in those cases. The plugin pauses the game itself.
         public void ShowInterstitial(Action onDone)
         {
-            if (!CanRequestInterstitial())
+            string skipReason = InterstitialSkipReason();
+            if (skipReason != null)
             {
+                Debug.Log($"[YandexSDK] Interstitial skipped: {skipReason} (isSDKEnabled={YG2.isSDKEnabled}, nowAdsShow={YG2.nowAdsShow}, timerInterAdv={YG2.timerInterAdv:0.0}s)");
                 onDone?.Invoke();
                 return;
             }
@@ -159,9 +161,11 @@ namespace CityPuzzle.Services
                 YG2.onOpenInterAdv -= Opened;
                 YG2.onCloseInterAdv -= Finish;
                 YG2.onErrorInterAdv -= Finish;
+                Debug.Log($"[YandexSDK] Interstitial finished (opened={opened}).");
                 onDone?.Invoke();
             }
 
+            Debug.Log("[YandexSDK] Requesting interstitial...");
             YG2.onOpenInterAdv += Opened;
             YG2.onCloseInterAdv += Finish;
             YG2.onErrorInterAdv += Finish;
@@ -169,18 +173,26 @@ namespace CityPuzzle.Services
             StartCoroutine(FinishIfNotOpened(() => opened, Finish));
         }
 
-        static bool CanRequestInterstitial()
+        // null = an ad can be requested; otherwise the reason it can't (logged, never shown to the player).
+        static string InterstitialSkipReason()
         {
 #if UNITY_EDITOR
-            if (!YG2.infoYG.Simulation.enableInterAdv) return false;
+            if (!YG2.infoYG.Simulation.enableInterAdv) return "simulation disabled in Simulation settings";
 #endif
-            return YG2.isSDKEnabled && !YG2.nowAdsShow && YG2.isTimerAdvCompleted;
+            if (!YG2.isSDKEnabled) return "YG2 SDK not enabled yet";
+            if (YG2.nowAdsShow) return "another ad is already showing";
+            if (!YG2.isTimerAdvCompleted) return $"cooldown active, {YG2.timerInterAdv:0.0}s left (InterstitialAdv.interAdvInterval in YG2 settings)";
+            return null;
         }
 
         IEnumerator FinishIfNotOpened(Func<bool> opened, Action finish)
         {
             yield return new WaitForSecondsRealtime(InterstitialOpenTimeout);
-            if (!opened()) finish();
+            if (!opened())
+            {
+                Debug.LogWarning($"[YandexSDK] Interstitial did not open within {InterstitialOpenTimeout}s — treating as closed. Check the browser console for '[YandexSDK] Cancel InterAdvShow' or ysdk.adv errors.");
+                finish();
+            }
         }
 
         public void SubmitLeaderboardScore(string leaderboardName, int score)
